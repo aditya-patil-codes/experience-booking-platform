@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  HOST
+  CUSTOMER
+}
+
+enum BookingStatus {
+  PENDING
+  PAID
+  CONFIRMED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+enum Direction {
+  DEBIT
+  CREDIT
+}
+
+model User {
+  id           String       @id @default(uuid())
+  email        String       @unique
+  passwordHash String
+  name         String
+  role         Role         @default(CUSTOMER)
+  createdAt    DateTime     @default(now())
+  experiences  Experience[]
+  bookings     Booking[]
+}
+
+model Experience {
+  id              String   @id @default(uuid())
+  hostId          String
+  host            User     @relation(fields: [hostId], references: [id])
+  title           String
+  description     String
+  city            String
+  priceCents      Int
+  currency        String   @default("EUR")
+  durationMinutes Int
+  createdAt       DateTime @default(now())
+  slots           Slot[]
+
+  @@index([city])
+  @@index([hostId])
+}
+
+model Slot {
+  id           String     @id @default(uuid())
+  experienceId String
+  experience   Experience @relation(fields: [experienceId], references: [id])
+  startsAt     DateTime
+  capacity     Int
+  bookings     Booking[]
+
+  @@index([experienceId, startsAt])
+}
+
+model Booking {
+  id        String        @id @default(uuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id])
+  slotId    String
+  slot      Slot          @relation(fields: [slotId], references: [id])
+  seats     Int
+  status    BookingStatus @default(PENDING)
+  expiresAt DateTime?
+  createdAt DateTime      @default(now())
+  payment   Payment?
+
+  @@index([slotId, status])
+  @@index([userId])
+}
+
+model Payment {
+  id                    String        @id @default(uuid())
+  bookingId             String        @unique
+  booking               Booking       @relation(fields: [bookingId], references: [id])
+  stripePaymentIntentId String?       @unique
+  amountCents           Int
+  currency              String        @default("EUR")
+  status                PaymentStatus @default(PENDING)
+  createdAt             DateTime      @default(now())
+  ledgerEntries         LedgerEntry[]
+}
+
+model LedgerEntry {
+  id          String    @id @default(uuid())
+  paymentId   String
+  payment     Payment   @relation(fields: [paymentId], references: [id])
+  account     String
+  direction   Direction
+  amountCents Int
+  createdAt   DateTime  @default(now())
+
+  @@index([paymentId])
+}
