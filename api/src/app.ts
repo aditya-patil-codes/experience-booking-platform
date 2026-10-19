@@ -4,6 +4,7 @@ import { authRouter } from "./routes/auth";
 import { notFound, errorHandler } from "./middleware/error";
 import cookieParser from "cookie-parser";
 import { requireAuth, requireRole } from "./middleware/auth";
+import { experiencesRouter } from "./routes/experiences";
 
 export const app = express();
 
@@ -19,11 +20,9 @@ app.get("/health", async (_req, res) => {
   }
 });
 
-app.get("/host/ping", requireAuth, requireRole("HOST"), (_req, res) => {
-  res.json({ ok: true });
-});
 
 app.use("/auth", authRouter);
+app.use("/experiences", experiencesRouter);
 
 app.use(notFound);
 app.use(errorHandler);
