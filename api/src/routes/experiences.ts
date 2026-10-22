@@ -4,6 +4,7 @@ import { prisma } from "../lib/prisma";
 import { AppError } from "../errors";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { validateBody } from "../middleware/validate";
+import type { Prisma } from "../../generated/prisma/client";
 
 export const experiencesRouter = Router();
 
@@ -31,6 +32,23 @@ const slotSchema = z.object({
 })
 
 
+const listSchema = z
+  .object({
+    q: z.string().trim().min(1).max(100).optional(),
+    city: z.string().trim().min(1).max(80).optional(),
+    minPrice: z.coerce.number().int().min(0).optional(),
+    maxPrice: z.coerce.number().int().min(0).optional(),
+    maxDuration: z.coerce.number().int().min(15).max(1440).optional(),
+    from: z.coerce.date().optional(),
+    to: z.coerce.date().optional(),
+    sort: z.enum(["newest", "price_asc", "price_desc"]).default("newest"),
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(50).default(12),
+  })
+  .refine((v) => v.minPrice === undefined || v.maxPrice === undefined || v.minPrice <= v.maxPrice, {
+    message: "minPrice must be <= maxPrice",
+  });
+
 async function getOwnedExperience(id: string, userId: string) {
   const experience = await prisma.experience.findUnique({ where: { id } });
   if (!experience) throw new AppError(404, "Experience not found", "NOT_FOUND");
@@ -54,6 +72,74 @@ experiencesRouter.post(
     res.status(201).json({ experience });
   }
 );
+
+
+// Public search: GET /experiences?q=food&city=Berlin&maxPrice=6000&sort=price_asc&page=1
+experiencesRouter.get("/", async (req, res) => {
+  const f = listSchema.parse(req.query);
+  const now = new Date();
+
+  const where: Prisma.ExperienceWhereInput = {
+    ...(f.city && { city: f.city }),
+    ...(f.maxDuration && { durationMinutes: { lte: f.maxDuration } }),
+    ...((f.minPrice !== undefined || f.maxPrice !== undefined) && {
+      priceCents: {
+        ...(f.minPrice !== undefined && { gte: f.minPrice }),
+        ...(f.maxPrice !== undefined && { lte: f.maxPrice }),
+      },
+    }),
+    ...(f.q && {
+      OR: [
+        { title: { contains: f.q, mode: "insensitive" } },
+        { description: { contains: f.q, mode: "insensitive" } },
+      ],
+    }),
+    slots: {
+      some: { startsAt: { gte: f.from ?? now, ...(f.to && { lte: f.to }) } },
+    },
+  };
+
+  const orderBy: Prisma.ExperienceOrderByWithRelationInput[] =
+    f.sort === "price_asc"
+      ? [{ priceCents: "asc" }, { id: "asc" }]
+      : f.sort === "price_desc"
+        ? [{ priceCents: "desc" }, { id: "asc" }]
+        : [{ createdAt: "desc" }, { id: "asc" }];
+
+  const [total, items] = await prisma.$transaction([
+    prisma.experience.count({ where }),
+    prisma.experience.findMany({
+      where,
+      orderBy,
+      skip: (f.page - 1) * f.limit,
+      take: f.limit,
+      select: {
+        id: true,
+        title: true,
+        city: true,
+        priceCents: true,
+        currency: true,
+        durationMinutes: true,
+        host: { select: { name: true } },
+        slots: {
+          where: { startsAt: { gte: now } },
+          orderBy: { startsAt: "asc" },
+          take: 1,
+          select: { startsAt: true },
+        },
+      },
+    }),
+  ]);
+
+  res.json({
+    items,
+    page: f.page,
+    limit: f.limit,
+    total,
+    totalPages: Math.ceil(total / f.limit),
+  });
+});
+
 
 
 // List my own experiences (host only). Must be defined before "/:id".

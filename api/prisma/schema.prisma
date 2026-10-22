@@ -58,6 +58,8 @@ model Experience {
 
   @@index([city])
   @@index([hostId])
+  @@index([city, priceCents])
+  @@index([createdAt])
 }
 
 model Slot {
