@@ -7,7 +7,10 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "tsx watch src/index.ts",
     "typecheck": "tsc --noEmit",
-    "postinstall": "prisma skills sync || exit 0"
+    "postinstall": "prisma skills sync || exit 0",
+    "seed": "tsx src/scripts/seed.ts demo",
+    "seed:bulk": "tsx src/scripts/seed.ts bulk",
+    "seed:clean": "tsx src/scripts/seed.ts clean"
   },
   "keywords": [],
   "author": "",
