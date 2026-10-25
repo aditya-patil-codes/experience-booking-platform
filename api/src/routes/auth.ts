@@ -52,7 +52,7 @@ authRouter.post("/login", validateBody(loginSchema), async (req, res) => {
   const user = await prisma.user.findUnique({ where: { email } });
   const ok = user ? await bcrypt.compare(password, user.passwordHash) : false;
   if (!user || !ok) {
-    throw new AppError(401, "Invalid email or password", "INVALID CREDS");
+    throw new AppError(401, "Invalid email or password", "INVALID_CREDENTIALS");
   }
 
   const token = jwt.sign({ role: user.role }, env.JWT_SECRET, {

@@ -11,5 +11,5 @@
     "ignoreDeprecations": "6.0",
     "types": ["node"]
   },
-  "include": ["src", "prisma7.config.ts"]
+  "include": ["src", "prisma7.config.ts",  "tests" , "vitest.config.ts",]
 }

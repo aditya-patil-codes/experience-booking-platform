@@ -3,7 +3,6 @@ import { prisma } from "./lib/prisma";
 import { authRouter } from "./routes/auth";
 import { notFound, errorHandler } from "./middleware/error";
 import cookieParser from "cookie-parser";
-import { requireAuth, requireRole } from "./middleware/auth";
 import { experiencesRouter } from "./routes/experiences";
 
 export const app = express();

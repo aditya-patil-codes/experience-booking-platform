@@ -4,13 +4,15 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest run",
     "dev": "tsx watch src/index.ts",
     "typecheck": "tsc --noEmit",
     "postinstall": "prisma skills sync || exit 0",
     "seed": "tsx src/scripts/seed.ts demo",
     "seed:bulk": "tsx src/scripts/seed.ts bulk",
-    "seed:clean": "tsx src/scripts/seed.ts clean"
+    "seed:clean": "tsx src/scripts/seed.ts clean",
+    "db:test:migrate": "dotenv -e .env.test -- prisma migrate deploy",
+    "lint": "eslint ."
   },
   "keywords": [],
   "author": "",
@@ -28,16 +30,20 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^26.6.5",
     "@types/pg": "^8.23.1",
     "@types/supertest": "^7.2.1",
+    "dotenv-cli": "^11.0.0",
+    "eslint": "^10.13.0",
     "prisma": "^7.10.1",
     "supertest": "^7.3.1",
     "tsx": "^4.23.15",
-    "typescript": "^7.0.2",
+    "typescript": "6.0",
+    "typescript-eslint": "^8.72.0",
     "vitest": "^5.0.5"
   }
 }
