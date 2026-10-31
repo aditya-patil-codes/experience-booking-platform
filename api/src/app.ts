@@ -4,6 +4,7 @@ import { authRouter } from "./routes/auth";
 import { notFound, errorHandler } from "./middleware/error";
 import cookieParser from "cookie-parser";
 import { experiencesRouter } from "./routes/experiences";
+import { bookingsRouter } from "./routes/bookings";
 
 export const app = express();
 
@@ -22,6 +23,7 @@ app.get("/health", async (_req, res) => {
 
 app.use("/auth", authRouter);
 app.use("/experiences", experiencesRouter);
+app.use("/bookings", bookingsRouter); 
 
 app.use(notFound);
 app.use(errorHandler);
