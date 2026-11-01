@@ -1,7 +1,26 @@
 import { prisma } from "../lib/prisma";
 import { AppError } from "../errors";
+import type { Prisma } from "../../generated/prisma/client";
 
 export const HOLD_MINUTES = 15;
+
+export async function seatsTaken(
+  db: Prisma.TransactionClient,
+  slotId: string,
+  now = new Date()
+) {
+  const result = await db.booking.aggregate({
+    _sum: { seats: true },
+    where: {
+      slotId,
+      OR: [
+        { status: { in: ["PAID", "CONFIRMED"] } },
+        { status: "PENDING", expiresAt: { gt: now } }
+      ]
+    }
+  });
+  return result._sum.seats ?? 0;
+}
 
 export async function createBooking(
   userId: string,
@@ -31,12 +50,9 @@ export async function createBooking(
       });
 
       //3 . Count the seats that are still taken
-      const taken = await tx.booking.aggregate({
-        _sum: { seats: true },
-        where: { slotId, status: { in: ["PENDING", "PAID", "CONFIRMED"] } }
-      });
+      const taken = await seatsTaken(tx, slotId, now);
 
-      const left = slot.capacity - (taken._sum.seats ?? 0);
+      const left = slot.capacity - taken;
       if (seats > left) {
         throw new AppError(
           409,
@@ -84,6 +100,7 @@ export async function cancelBooking(userId: string, bookingId: string) {
 export function withEffectiveStatus<
   T extends { status: string; expiresAt: Date | null }
 >(b: T) {
-  const expired = b.status === "PENDING" && b.expiresAt !== null && b.expiresAt < new Date();
-  return {...b , status:expired ? "EXPIRED" : b.status}
+  const expired =
+    b.status === "PENDING" && b.expiresAt !== null && b.expiresAt < new Date();
+  return { ...b, status: expired ? "EXPIRED" : b.status };
 }

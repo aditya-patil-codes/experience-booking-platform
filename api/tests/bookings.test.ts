@@ -3,6 +3,7 @@ import request from "supertest";
 import { app } from "../src/app";
 import { prisma } from "../src/lib/prisma";
 import { resetDb, loginAgent, createExperience, addSlot } from "./helpers";
+import { seatsTaken } from "../src/services/bookings";
 
 async function setup(capacity: number) {
   const host = await loginAgent("HOST", "priya@example.com");
@@ -106,5 +107,16 @@ describe("bookings", () => {
     const res = await a.get("/bookings/mine");
     expect(res.status).toBe(200);
     expect(res.body.bookings[0].status).toBe("EXPIRED");
+  });
+
+  it("does not count an expired hold as taken seats", async () => {
+    const { slot } = await setup(2);
+    const a = await loginAgent("CUSTOMER", "a@example.com");
+    const first = await a.post("/bookings").send({ slotId: slot.id, seats: 2 }).expect(201);
+    await prisma.booking.update({
+        where: { id: first.body.booking.id },
+        data: { expiresAt: new Date(Date.now() - 60_000) },
+    });
+    expect(await seatsTaken(prisma, slot.id)).toBe(0);
   });
 });
