@@ -43,3 +43,10 @@ export async function addSlot(agent: Agent, experienceId: string, days = 7, capa
     .expect(201);
   return res.body.slot as { id: string };
 }
+
+export async function setupSlot(capacity: number) {
+  const host = await loginAgent("HOST", "priya@example.com");
+  const exp = await createExperience(host);
+  const slot = await addSlot(host, exp.id, 7, capacity);
+  return { host, slot };
+}
